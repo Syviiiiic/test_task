@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 4 # Создаем 4 реплики подов для обработки пиковой нагрузки
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+        - name: web-app-container
+          image: your-web-app-image:latest # Указываем Docker-образ, который будет использоваться для контейнера.
+          resources:
+            requests:
+              memory: "128Mi" # Задаем требования по памяти
+              cpu: "1" # Задаем требования по CPU для первых запросов
+            limits:
+              memory: "128Mi" # Задаем ограничения по памяти
+              cpu: "0.1" # Задаем ограничения по CPU для последующих запросов
+          readinessProbe:
+            httpGet:
+              path: /done # Путь для проверки готовности приложения
+              port: 8080 # Порт, на котором работает приложение
+            initialDelaySeconds: 10 # Задержка перед первой проверкой
+            periodSeconds: 5 # Интервал между проверками
+          livenessProbe:
+            httpGet:
+              path: /health # Путь для проверки работоспособности приложения
+              port: 8080 # Порт, на котором работает приложение
+            initialDelaySeconds: 60 # Задержка перед первой проверкой
+            periodSeconds: 10 # Интервал между проверками
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  selector:
+    app: web-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: LoadBalancer 
